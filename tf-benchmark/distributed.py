@@ -41,11 +41,12 @@ def main(args):
 
     # Attempting to connect all nodes in `tf.train.ClusterSpec`.
     # Specify your machine's IP and Port
+    # Replace IP address below from 127.0.0.1 to e.g. 10.143.255.255
     cluster_spec = tf.train.ClusterSpec({
         'worker': [
-            '10.143.3.3:2222',
+            '127.0.0.1:2222',
         ],
-        'ps': ['128.135.164.171:2222'],
+        'ps': ['127.0.0.1:2222'],
     })
 
     server = tf.train.Server(cluster_spec,
