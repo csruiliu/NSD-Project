@@ -12,7 +12,7 @@ from tensorflow.python.client import timeline
 
 # Hyper-parameters
 learning_rate = 0.01
-epoch = 100
+iteration = 100
 nbatch = 32
 
 # image shapes
@@ -40,11 +40,12 @@ def main(args):
     imgs, labels = train_iterator.get_next()
 
     # Attempting to connect all nodes in `tf.train.ClusterSpec`.
+    # Specify your machine's IP and Port
     cluster_spec = tf.train.ClusterSpec({
         'worker': [
-            '127.0.0.1:2223',
+            '10.143.3.3:2222',
         ],
-        'ps': ['127.0.0.1:2222'],
+        'ps': ['128.135.164.171:2222'],
     })
 
     server = tf.train.Server(cluster_spec,
@@ -85,16 +86,17 @@ def main(args):
 
             is_chief = (args.task_index == 0)
 
-            hooks = [tf.train.StopAtStepHook(last_step=epoch),
+            hooks = [tf.train.StopAtStepHook(last_step=iteration),
                      tf.train.CheckpointSaverHook('./example-save',
-                                                  save_steps=epoch,
+                                                  save_steps=iteration,
                                                   saver=tf.train.Saver(max_to_keep=1))]
 
             # Initialize the variables, if `is_chief`.
             config = tf.ConfigProto(
                     allow_soft_placement=True,
+                    log_device_placement=True,
                     device_filters=[
-                    '/job:ps', '/job:worker/task:%d' % args.task_index],
+                    '/job:ps', '/job:worker/task:%d/gpu:0' % args.task_index],
             )
             with tf.train.MonitoredTrainingSession(
                     is_chief=is_chief,
@@ -114,6 +116,7 @@ def main(args):
         
                 print('  Duration (via time.perf_counter()): %f (%f - %f)' % (stop_time - start_time, stop_time, start_time))
                 print('  Clock (via time.clock()): %f (%f - %f)' % (stop_clock - start_clock, stop_clock, start_clock))
+                print('  Throughput [image/sec] : %f  ' % (nbatch*iteration/(stop_time - start_time) ) )
 
         # It's able to fetch variables in another session.
         #if is_chief:
@@ -126,8 +129,8 @@ def main(args):
 
 def input_fn(images, labels, height=32, width=32, mtype='mlp',prefetch=1):
   """ 
-    INPUT:  imagess : MNIST image [batch, height, width, channel]. np.ndarray
-            labels  : MNIST image labels.  This should be one-hot 
+    INPUT:  imagess : numpy image [batch, height, width, channel]. np.ndarray
+            labels  : numpy image labels.  This should be one-hot 
             height/width : resized height, width
             mtype   : model type
             nbatch : batch size
@@ -135,7 +138,18 @@ def input_fn(images, labels, height=32, width=32, mtype='mlp',prefetch=1):
     OUTPUT: tf.data object
   """
   # reshape other than mlp model
-  images = images.reshape(-1,28,28,1)
+  ndim = len(images.shape)
+  print(ndim, flush=True)
+  if ndim <= 3:
+    # case MNIST, images = (batch, h x w, c)
+    if ndim == 2:
+      _, hw = np.shape(images)
+      c = 1
+    elif ndim == 3:
+      _, hw, c = np.shape(images)
+    h = w = int(np.sqrt(hw))
+    images = images.reshape(-1,h,w,c)
+
   images = tf.image.resize(images, (height, width))
   if mtype == 'mlp':
     images = tf.reshape(images, [-1,height*width])
