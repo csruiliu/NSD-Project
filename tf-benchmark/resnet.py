@@ -82,7 +82,8 @@ class resnet(object):
         with tf.variable_scope(self.net_name + '_instance'):
             x = tf.pad(input, tf.constant([[0, 0], [3, 3, ], [3, 3], [0, 0]]), "CONSTANT")
             #training = tf.placeholder(tf.bool, name='training')
-            w_conv1 = self.weight_variable([7, 7, 3, 64])
+            #w_conv1 = self.weight_variable([7, 7, 3, 64])
+            w_conv1 = self.weight_variable([7, 7, 1, 64])
             x = tf.nn.conv2d(x, w_conv1, strides=[1, 2, 2, 1], padding='VALID')
             x = tf.layers.batch_normalization(x, axis=3, training=training)
             x = tf.nn.relu(x)
@@ -130,8 +131,10 @@ class resnet(object):
             self.model_size += x_size
 
             avg_pool_size = int(self.img_h // 32)
+            print(avg_pool_size, self.img_h)
 
-            x = tf.nn.avg_pool(x, [1, avg_pool_size, avg_pool_size, 1], strides=[1,1,1,1], padding='VALID')
+            #x = tf.nn.avg_pool(x, [1, avg_pool_size, avg_pool_size, 1], strides=[1,1,1,1], padding='VALID')
+            x = tf.nn.avg_pool(x, [1, avg_pool_size, avg_pool_size, 1], strides=[1,1,1,1], padding='SAME')
             
             flatten = tf.layers.flatten(x)
             x = tf.layers.dense(flatten, units=50, activation=tf.nn.relu)
