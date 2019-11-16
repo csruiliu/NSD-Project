@@ -1,0 +1,8 @@
+-n: how many nodes (1 by default)
+-g: number of gpus per node (1 by default)
+-nr ranking within the nodes (0 by default)
+--epochs: number of total epochs to run (2 by default)
+
+For instance, 2 nodes with 2 GPUs each, we need 4 terminals (one on each node). 
+On node 0:    python ./mobilenet.py -n 2 -g 2 -nr 0
+On node 1:    python ./mobilenet.py -n 2 -g 2 -nr 1
