@@ -1,4 +1,3 @@
-
 import os
 import time
 import argparse
@@ -12,12 +11,12 @@ from tensorflow.python.client import timeline
 
 # Hyper-parameters
 learning_rate = 0.01
-epoch = 100
+epoch = 10
 nbatch = 32
 
 # image shapes
-height = 32
-width  = 32
+height = 28
+width  = 28
 
 def main(args):
     # Select model
@@ -29,8 +28,18 @@ def main(args):
     elif args.mtype == 'resnet': 
       from resnet import resnet as model_class
 
+    num_node = args.numnode
+    worker_nodes = []
+
+    if num_node == 2:
+        worker_nodes = ['128.135.24.250:2223']
+    elif args.numnode == 3:
+        worker_nodes = ['128.135.24.250:2223', '128.135.24.252:2223']
+    elif args.numnode == 4:
+        worker_nodes = ['128.135.24.250:2223', '128.135.24.252:2223', '128.135.24.253:2223']
+    
     # get data
-    mnist = input_data.read_data_sets(os.path.abspath("./MNIST_data/"), one_hot=True)
+    mnist = input_data.read_data_sets(os.path.abspath("../dataset/mnist/"), one_hot=True)
     train_images =  mnist.train.images
     train_labels =  mnist.train.labels
 
@@ -41,15 +50,11 @@ def main(args):
 
     # Attempting to connect all nodes in `tf.train.ClusterSpec`.
     cluster_spec = tf.train.ClusterSpec({
-        'worker': [
-            '127.0.0.1:2223',
-        ],
-        'ps': ['127.0.0.1:2222'],
+        'worker': worker_nodes,
+        'ps': ['128.135.24.251:2222'],
     })
 
-    server = tf.train.Server(cluster_spec,
-                             job_name=args.job_name,
-                             task_index=args.task_index)
+    server = tf.train.Server(cluster_spec, job_name=args.job_name, task_index=args.task_index)
 
     if args.job_name == "ps":
         # `server.join()` means it's NEVER killed
@@ -74,7 +79,6 @@ def main(args):
             except:
               raise NameError("\n ###  Error! Make sure your model type argument is mlp or mobilenet or resnet ###\n")
 
-
             # mlp
             preds = model.build(imgs)
 
@@ -86,15 +90,13 @@ def main(args):
             is_chief = (args.task_index == 0)
 
             hooks = [tf.train.StopAtStepHook(last_step=epoch),
-                     tf.train.CheckpointSaverHook('./example-save',
-                                                  save_steps=epoch,
+                     tf.train.CheckpointSaverHook('./example-save',save_steps=epoch,
                                                   saver=tf.train.Saver(max_to_keep=1))]
 
             # Initialize the variables, if `is_chief`.
             config = tf.ConfigProto(
                     allow_soft_placement=True,
-                    device_filters=[
-                    '/job:ps', '/job:worker/task:%d' % args.task_index],
+                    device_filters=['/job:ps', '/job:worker/task:%d' % args.task_index],
             )
             with tf.train.MonitoredTrainingSession(
                     is_chief=is_chief,
@@ -107,13 +109,12 @@ def main(args):
                 start_clock = time.clock()
                 while not sess.should_stop():
                     step, _, train_loss = sess.run([get_global_step, train_op, loss])
-                    print('In {step} step: loss = {loss}'
-                          .format(step=step, loss=train_loss))
+                    print('In {step} step: loss = {loss}'.format(step=step, loss=train_loss))
                 stop_time = time.perf_counter()
                 stop_clock = time.clock()
         
-                print('  Duration (via time.perf_counter()): %f (%f - %f)' % (stop_time - start_time, stop_time, start_time))
-                print('  Clock (via time.clock()): %f (%f - %f)' % (stop_clock - start_clock, stop_clock, start_clock))
+                print('Duration (via time.perf_counter()): %f (%f - %f)' % (stop_time - start_time, stop_time, start_time))
+                print('Clock (via time.clock()): %f (%f - %f)' % (stop_clock - start_clock, stop_clock, start_clock))
 
         # It's able to fetch variables in another session.
         #if is_chief:
@@ -152,4 +153,5 @@ if __name__ == '__main__':
                         default=0)
     parser.add_argument('--mtype', dest='mtype', type=str,
                         default='mlp')
+    parser.add_argument('--node', dest='numnode', action='store', type=int, default=2)
     main(parser.parse_args())
