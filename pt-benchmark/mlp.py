@@ -18,6 +18,7 @@ import torch.multiprocessing as mp
 
 import time
 import math
+from datetime import datetime
 
 # # Hyper-parameters
 learning_rate = 0.01
@@ -39,8 +40,11 @@ def main():
     args.world_size = args.gpus * args.nodes    
     
     #IP address for process 0 so that all proc can sync up at first
-    os.environ['MASTER_ADDR'] = '10.57.23.164'              
-    os.environ['MASTER_PORT'] = '8888'      
+    #os.environ['MASTER_ADDR'] = '10.143.3.3'              
+    #os.environ['MASTER_PORT'] = '8888'      
+    #os.environ['MASTER_ADDR'] = '10.57.23.164'              
+    os.environ['MASTER_ADDR'] = ' 128.135.164.173'              
+    os.environ['MASTER_PORT'] = '8899'      
     # each process run train(i, args)                
     mp.spawn(train, nprocs=args.gpus, args=(args,))       
         
@@ -73,11 +77,15 @@ def train(gpu, args):
     
     # used nccl backend (fastest)             
     dist.init_process_group(                                   
-        backend='nccl',                                         
-        init_method='env://',                                   
+        backend='gloo',                                         
+        init_method='tcp://128.135.164.173:8899',                                   
         world_size=args.world_size,                              
         rank=rank                                               
     ) 
+        #backend='nccl',                                         
+        #init_method='tcp://10.143.3.3:2223',                                   
+        #backend='nccl',                                         
+        #init_method='env://',                                   
     
     torch.manual_seed(0)    
     model = MLP()
@@ -115,7 +123,7 @@ def train(gpu, args):
 
 
     train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
-                                               batch_size=batch_size,
+                                               batch_size=nbatch,
                                                shuffle=False,
                                                num_workers=0,
                                                pin_memory=True,
@@ -147,9 +155,10 @@ def train(gpu, args):
                     total_step,
                     loss.item())
                    )
-            if idx > 5:
-                print("NORMAL END")
-                break
+            # debug
+            #if i > 5:
+            #    print("NORMAL END")
+            #    break
                 
     if gpu == 0:
         print("Training complete in: " + str(datetime.now() - start))
