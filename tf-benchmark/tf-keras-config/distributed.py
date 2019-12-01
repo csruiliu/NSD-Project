@@ -12,13 +12,16 @@ from tensorflow.python.client import timeline
 #from tensorflow.keras.backend import set_session
 
 # Hyper-parameters
-learning_rate = 0.01
-iteration = 100
-nbatch = 8
+learning_rate = 0.001
+iteration = 10
+#iteration = 100
+#nbatch = args.batch_size
 
 # image shapes
-height = 28
-width  = 28
+#height = args.height
+#width  = args.width
+#height = 32
+#width  = 32
 #height = 224
 #width  = 224
 channel=1
@@ -27,10 +30,18 @@ channel=1
 num_classes = 10
 
 def main(args):
+
+    # args 
+    nbatch = args.batch_size
+    height = args.height
+    width  = args.width
+
     # Select model
     #   mlp or mobilenet or resnet
     if args.mtype == 'mlp': 
       from mlp import model_fn
+    elif args.mtype == 'mobilenet': 
+      from mobilenet import model_fn
     elif args.mtype == 'resnet': 
       from resnet import model_fn
 
@@ -45,7 +56,7 @@ def main(args):
 
     # Specify GPU config here otherwise distributed training won't reflect the config
     config = tf.ConfigProto(
-              gpu_options=tf.GPUOptions(per_process_gpu_memory_fraction = 0.4),
+              gpu_options=tf.GPUOptions(per_process_gpu_memory_fraction = 0.6),
               allow_soft_placement=True,
     )
 
@@ -69,7 +80,7 @@ def main(args):
             mnist = input_data.read_data_sets(os.path.abspath("./MNIST_data/"), one_hot=True)
             train_images =  mnist.test.images
             train_labels =  mnist.test.labels
-            dataset = input_fn(train_images, train_labels, mtype=args.mtype)
+            dataset = input_fn(train_images, train_labels,height, width, nbatch, args.mtype)
             train_iterator = dataset.make_initializable_iterator()
             imgs, labels = train_iterator.get_next()
 
@@ -120,14 +131,19 @@ def main(args):
             # logout
             print('  duration (via time.perf_counter()): %f (%f - %f)' % (stop_time - start_time, stop_time, start_time))
             print('  Throughput [image/sec] : %f  ' % (nbatch*iteration/(stop_time - start_time) ) )
+            
+            # save log
+            os.makedirs("./log/MNIST", exist_ok=True)
+            with open("./log/MNIST/"+args.expname+'.txt', "w") as f:
+              f.write(str(stop_time - start_time)+','+str(nbatch*iteration/(stop_time - start_time)))
 
 
-def input_fn(images, labels, height=32, width=32, mtype='mlp',prefetch=1):
+def input_fn(images, labels, height=32, width=32, nbatch=32, model_type='mlp',prefetch=1):
     """ 
     INPUT:  imagess : numpy image [batch, height, width, channel]. np.ndarray
             labels  : numpy image labels.  This should be one-hot 
             height/width : resized height, width
-            mtype   : model type
+            model_type   : model type
             nbatch : batch size
 
     OUTPUT: tf.data object
@@ -146,7 +162,7 @@ def input_fn(images, labels, height=32, width=32, mtype='mlp',prefetch=1):
       images = images.reshape(-1,h,w,c)
 
     images = tf.image.resize(images, (height, width))
-    if mtype == 'mlp':
+    if model_type == 'mlp':
       images = tf.reshape(images, [-1,height*width])
   
     dataset = tf.data.Dataset.from_tensor_slices((images, labels))
@@ -161,4 +177,12 @@ if __name__ == '__main__':
                         default=0)
     parser.add_argument('--mtype', dest='mtype', type=str,
                         default='mlp')
+    parser.add_argument('--expname', dest='expname', type=str,
+                        default='default')
+    parser.add_argument('--batch_size', dest='batch_size', type=int,
+                        default=32)
+    parser.add_argument('--height', dest='height', type=int,
+                        default=28)
+    parser.add_argument('--width', dest='width', type=int,
+                        default=28)
     main(parser.parse_args())
