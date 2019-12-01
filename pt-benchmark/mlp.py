@@ -40,11 +40,11 @@ def main():
     args.world_size = args.gpus * args.nodes    
     
     #IP address for process 0 so that all proc can sync up at first
-    #os.environ['MASTER_ADDR'] = '10.143.3.3'              
-    #os.environ['MASTER_PORT'] = '8888'      
+    os.environ['MASTER_ADDR'] = '10.143.3.3'              
+    os.environ['MASTER_PORT'] = '8888'      
     #os.environ['MASTER_ADDR'] = '10.57.23.164'              
-    os.environ['MASTER_ADDR'] = ' 128.135.164.173'              
-    os.environ['MASTER_PORT'] = '8899'      
+    #os.environ['MASTER_ADDR'] = ' 128.135.164.173'              
+    #os.environ['MASTER_PORT'] = '8899'      
     # each process run train(i, args)                
     mp.spawn(train, nprocs=args.gpus, args=(args,))       
         
@@ -78,7 +78,7 @@ def train(gpu, args):
     # used nccl backend (fastest)             
     dist.init_process_group(                                   
         backend='gloo',                                         
-        init_method='tcp://128.135.164.173:8899',                                   
+        init_method='tcp://10.143.3.3:8888',                                   
         world_size=args.world_size,                              
         rank=rank                                               
     ) 
@@ -90,19 +90,24 @@ def train(gpu, args):
     torch.manual_seed(0)    
     model = MLP()
     
-    torch.cuda.set_device(gpu)
-    model.cuda(gpu)
+    # join cpu or cpu 
+    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu') 
+    #torch.cuda.set_device(gpu)
+
+    if torch.cuda.is_available():
+      model.cuda(gpu)
+      criterion = nn.CrossEntropyLoss().cuda(gpu)
+    else:
+      criterion = nn.CrossEntropyLoss()
     
-    
-    criterion = nn.CrossEntropyLoss().cuda(gpu)
-    
-    # Create a SGD optimizer for gradient descent
+    # Create a Adam optimizer for gradient descent
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
     
     
     # wrap the model
     model = nn.parallel.DistributedDataParallel(model,
-                                                device_ids=[gpu])
+                                                device_ids=[device])
+                                                #device_ids=[gpu])
     
     
 
@@ -137,8 +142,9 @@ def train(gpu, args):
         
         for i, (images, labels) in enumerate(train_loader):
             
-            images = images.cuda(non_blocking=True)
-            labels = labels.cuda(non_blocking=True)
+            if torch.cuda.is_available():
+              images = images.cuda(non_blocking=True)
+              labels = labels.cuda(non_blocking=True)
             outputs = model(images) # forward pass input through the network
             loss = criterion(outputs, labels)
             
