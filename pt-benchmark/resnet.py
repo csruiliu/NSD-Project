@@ -21,7 +21,6 @@ import time
 
 # # Hyper-parameters
 learning_rate = 0.01
-nbatch = 32
 
 def main():
     parser = argparse.ArgumentParser()
@@ -30,15 +29,19 @@ def main():
                         help='number of gpus per node')
     parser.add_argument('-nr', '--nr', default=0, type=int,
                         help='ranking within the nodes')
-    parser.add_argument('--epochs', default=2, type=int, metavar='N',
+    parser.add_argument('-epochs', default=1, type=int, metavar='N',
                         help='number of total epochs to run')
+    parser.add_argument('-batch_size', default=32, type=int, metavar='N',
+                        help='number of batch size')
+    parser.add_argument('-expname', default='default', type=str, metavar='N',
+                        help='name of running ')
     args = parser.parse_args()
     
     # total number of processes to run
     args.world_size = args.gpus * args.nodes    
     
     #IP address for process 0 so that all proc can sync up at first
-    os.environ['MASTER_ADDR'] = '10.57.23.164'              
+    os.environ['MASTER_ADDR'] = '10.143.3.3'              
     os.environ['MASTER_PORT'] = '8888'      
     # each process run train(i, args)                
     mp.spawn(train, nprocs=args.gpus, args=(args,))   
@@ -173,11 +176,22 @@ def train(gpu, args):
     
     
 
+    # MNIST
     train_dataset  = datasets.MNIST('./data', train=True, download=True,
                              transform=transforms.Compose([
                                  transforms.ToTensor(),
                                  transforms.Normalize((0.1307,), (0.3081,))
                              ]))
+    # Imagnet
+    #train_dataset  = datasets.ImageNet('./data', train=True,
+    #                         transform=transforms.Compose([
+    #                             transforms.Resize(256),
+    #                             transforms.RandomCrop(224),
+    #                             transforms.RandomHorizontalFlip(),
+    #                             transforms.ToTensor(),
+    #                             transforms.Normalize((0.485, 0.456, 0.406),
+    #                                                    (0.229, 0.224, 0.225))
+    #                         ]))
     
     
     # makes sure that each process gets a different slice of the training data.
@@ -190,14 +204,14 @@ def train(gpu, args):
 
 
     train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
-                                               batch_size=batch_size,
+                                               batch_size=args.batch_size,
                                                shuffle=False,
                                                num_workers=0,
                                                pin_memory=True,
                                                sampler=train_sampler)
 
     
-    start = datetime.now()
+    start_time = time.perf_counter()
     total_step = len(train_loader)  
          
     for epoch in range(args.epochs):
@@ -222,12 +236,18 @@ def train(gpu, args):
                     total_step,
                     loss.item())
                    )
-            #if idx > 5:
-            #    print("NORMAL END")
-            #    break
                 
     if gpu == 0:
-        print("Training complete in: " + str(datetime.now() - start))
+        stop_time = time.perf_counter()
+
+        # logout
+        print('  duration (via time.perf_counter()): %f (%f - %f)' % (stop_time - start_time, stop_time, start_time))
+        print('  Throughput [image/sec] : %f  ' % (args.batch_size*total_step*args.epochs/(stop_time - start_time) ) )
+            
+        # save log
+        os.makedirs("./log", exist_ok=True)
+        with open("./log/"+args.expname+'.txt', "w") as f:
+          f.write(str(stop_time - start_time)+','+str(args.batch_size*total_step*args.epochs/(stop_time - start_time)))
         
 
     
