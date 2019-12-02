@@ -34,6 +34,8 @@ def main():
                         help='number of batch size')
     parser.add_argument('-expname', default='default', type=str, metavar='N',
                         help='name of running ')
+    parser.add_argument('-datadir', default='./data/', type=str, metavar='N',
+                        help='name of data directory')
     args = parser.parse_args()
     
     # total number of processes to run
@@ -205,7 +207,7 @@ def train(gpu, args):
     
 
     # MNIST
-    train_dataset  = datasets.MNIST('./data', train=True, download=True,
+    train_dataset  = datasets.MNIST(args.datadir, train=True, download=True,
                              transform=transforms.Compose([
                                  transforms.ToTensor(),
                                  transforms.Normalize((0.1307,), (0.3081,))
