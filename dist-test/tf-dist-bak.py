@@ -10,7 +10,7 @@ epoch = 10
 
 
 
-def main(jtg, tig):
+def main(jtg, tig, is_chief):
     # Create train data
     train_X = np.linspace(-1, 1, 100)
     train_Y = 2 * train_X + np.random.randn(*train_X.shape) * 0.33 + 10
@@ -21,7 +21,7 @@ def main(jtg, tig):
     # Exampmle: {"cluster": {"ps": ["127.0.0.1:3001"], "worker": ["127.0.0.1:3002", "127.0.0.1:3003"]}, "task": {"index": 0, "type": "worker"}}
     #env = json.loads(os.environ.get("TF_CONFIG", "{}"))
     #task_data = env.get("task", None)
-    cluster_spec = {'ps': ['128.135.24.251:1111'], 'worker': ['128.135.24.250:1111', '128.135.24.252:1111', '128.135.24.253:1111']}
+    cluster_spec = {'ps': ['128.135.24.250:1111','128.135.24.251:1111'], 'worker': ['128.135.24.252:1111', '128.135.24.253:1111']}
     task_type = jtg
     task_index = tig
 
@@ -48,14 +48,26 @@ def main(jtg, tig):
             loss = tf.reduce_sum(tf.square(Y - tf.multiply(X, w) - b))
             train_op = optimizer.minimize(loss, global_step=global_step)
             predict_op = tf.multiply(X, w) + b
-            tf.summary.scalar("loss", loss)
-            summary_op = tf.summary.merge_all()
-            init_op = tf.global_variables_initializer()
-            saver = tf.train.Saver()
+            #tf.summary.scalar("loss", loss)
+            #summary_op = tf.summary.merge_all()
+            #init_op = tf.global_variables_initializer()
+            #saver = tf.train.Saver()
             #saver = tf.train.Saver(sharded=True)
+            
+            with tf.Session(server.target) as sess:
+                print("Run training with epoch number: {}".format(epoch))
+                sess.run(tf.global_variables_initializer())
+                for i in range(epoch):
+                    for (x, y) in zip(train_X, train_Y):
+                        x = np.array([[x]])
+                        y = np.array([[y]])
+                        sess.run(train_op, feed_dict={X: x, Y: y})
 
-
-            sv = tf.train.Supervisor(is_chief=(task_index == 0),
+                end_training_time = datetime.datetime.now()
+                print("[{}] End of distributed training.".format(
+                    end_training_time - start_training_time))
+            '''
+            sv = tf.train.Supervisor(is_chief=is_chief,
                                      logdir='./checkpoint/',
                                      init_op=init_op,
                                      #summary_op=summary_op,
@@ -83,15 +95,17 @@ def main(jtg, tig):
 
             except Exception as e:
                 print(e)
-
+            '''
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('-j', '--jobname', action='store', type=str, default='none', help='ps or worker')
     parser.add_argument('-t', '--taskid', action='store', type=int, default=0)
+    parser.add_argument('-c', '--chief', action='store_true', default=False)
     args = parser.parse_args()
     job_type_global = args.jobname
     task_idx_global = args.taskid
+    is_chief_global = args.chief
+    print()
 
-
-    main(job_type_global, task_idx_global)
+    main(job_type_global, task_idx_global, is_chief_global)
