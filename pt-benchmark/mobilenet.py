@@ -251,9 +251,9 @@ def train(gpu, args):
                     total_step,
                     loss.item())
                    )
-            if idx > 5:
-                print("NORMAL END")
-                break
+            #if idx > 5:
+            #    print("NORMAL END")
+            #    break
                 
     if gpu == 0:
         print("Training complete in: " + str(datetime.now() - start))
