@@ -4,7 +4,7 @@ import time
 import argparse
 import numpy as np
 import tensorflow as tf
-import tensorflow_datasets as tfds
+#import tensorflow_datasets as tfds
 
 from tensorflow.python.keras.layers import *                                                    
 from tensorflow.python.keras.models import Model
@@ -48,11 +48,15 @@ def main(args):
 
     # Attempting to connect all nodes in `tf.train.ClusterSpec`.
     # Specify your machine's IP and Port
+    #cluster_spec = tf.train.ClusterSpec({
+    #    'worker': [
+    #        '10.143.3.3:2222'
+    #    ],
+    #    'ps': ['128.135.164.173:55555'],
+    #})
     cluster_spec = tf.train.ClusterSpec({
-        'worker': [
-            '10.143.3.3:2222'
-        ],
-        'ps': ['128.135.164.173:55555'],
+        'worker': args.worker_ip_port,
+        'ps': args.ps_ip_port,
     })
 
     # Specify GPU config here otherwise distributed training won't reflect the config
@@ -78,15 +82,17 @@ def main(args):
                 cluster=cluster_spec)):
 
             # get data
-            ### MNIST
-            #mnist = input_data.read_data_sets(os.path.abspath("./MNIST_data/"), one_hot=True)
-            #train_images =  mnist.test.images
-            #train_labels =  mnist.test.labels
-            #dataset = input_fn(train_images, train_labels,height, width, nbatch, args.mtype)
+            if args.dataname == 'mnist':
+              ### MNIST
+              mnist = input_data.read_data_sets(os.path.abspath(args.datadir), one_hot=True)
+              train_images =  mnist.test.images
+              train_labels =  mnist.test.labels
+              dataset = input_fn(train_images, train_labels,height, width, nbatch, args.mtype)
+            else:
+              ### Imagenet2012
+              datasets = tfds.load('imagenet2012', data_dir=args.datadir)
+              dataset  = input_imgnet_fn(datasets, args.nbatch) 
 
-            ### Imagenet2012
-            datasets = tfds.load('imagenet2012', data_dir=)
-            dataset  = input_imgnet_fn(datasets, args.nbatch) 
             train_iterator = dataset.make_initializable_iterator()
             imgs, labels = train_iterator.get_next()
 
@@ -139,8 +145,8 @@ def main(args):
             print('  Throughput [image/sec] : %f  ' % (nbatch*iteration/(stop_time - start_time) ) )
             
             # save log
-            os.makedirs("./log/MNIST", exist_ok=True)
-            with open("./log/MNIST/"+args.expname+'.txt', "w") as f:
+            os.makedirs("./log/"+args.dataname, exist_ok=True)
+            with open("./log/"+args.dataname+"/"+args.expname+'.txt', "w") as f:
               f.write(str(stop_time - start_time)+','+str(nbatch*iteration/(stop_time - start_time)))
 
 def input_imgnet_fn(dataset, nbatch=32):
@@ -183,10 +189,16 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--job-name', dest='job_name', type=str,
                         choices=['ps', 'worker'])
+    parser.add_argument('--ps-ip-port', dest='ps_ip_port', nargs='+')
+    parser.add_argument('--worker-ip-port', dest='worker_ip_port', nargs='+')
     parser.add_argument('--task-index', dest='task_index', type=int,
                         default=0)
     parser.add_argument('--mtype', dest='mtype', type=str,
                         default='mlp')
+    parser.add_argument('--dataname', dest='dataname', type=str,
+                        default='mnist')
+    parser.add_argument('--datadir', dest='datadir', type=str,
+                        default='./MNIST')
     parser.add_argument('--expname', dest='expname', type=str,
                         default='default')
     parser.add_argument('--batch_size', dest='batch_size', type=int,
