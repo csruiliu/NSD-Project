@@ -40,7 +40,7 @@ delays=(0.1)  #ms
 bandwidths=(1000)  #Mbits
 packets=(0) # percent loss
 #delays=(1 10 100)  #ms
-#bandwidths=(1000 100 10)  #Mbits
+#bandwidths=(1000 500 100)  #Mbits(FUll ; 1/2 ; 1/10)
 #packets=(0 1 10) # percent loss
 
 echo 'START PERFORMANCE EXP'
