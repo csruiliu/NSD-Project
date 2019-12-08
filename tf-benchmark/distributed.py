@@ -1,5 +1,6 @@
 
 import os
+import glob
 import time
 import argparse
 import numpy as np
@@ -11,6 +12,8 @@ from tensorflow.python.keras.models import Model
 from tensorflow.examples.tutorials.mnist import input_data
 from tensorflow.python.client import timeline
 #from tensorflow.keras.backend import set_session
+
+from PIL import Image
 
 # Hyper-parameters
 learning_rate = 0.001
@@ -25,10 +28,6 @@ iteration = 10
 #width  = 32
 #height = 224
 #width  = 224
-channel=1
-
-# image label class
-num_classes = 10
 
 def main(args):
 
@@ -88,10 +87,24 @@ def main(args):
               train_images =  mnist.test.images
               train_labels =  mnist.test.labels
               dataset = input_fn(train_images, train_labels,height, width, nbatch, args.mtype)
+
+              # channel
+              channel=1
+              # image label class
+              num_classes = 10
             else:
               ### Imagenet2012
-              datasets = tfds.load('imagenet2012', data_dir=args.datadir)
-              dataset  = input_imgnet_fn(datasets, args.nbatch) 
+              # if tf >= 1.15
+              #datasets = tfds.load('imagenet2012', data_dir=args.datadir)
+              #dataset  = input_imgnet_fn(datasets, args.nbatch) 
+              imagenet2012 = imagenet_custom_loader(os.path.abspath(args.datadir), one_hot=True, height=args.height, width=args.width)
+              train_images, train_labels = imagenet2012
+              dataset = input_fn(train_images, train_labels,height, width, nbatch, args.mtype)
+
+              # channel
+              channel=3
+              # image label class
+              num_classes = 1000
 
             train_iterator = dataset.make_initializable_iterator()
             imgs, labels = train_iterator.get_next()
@@ -102,7 +115,7 @@ def main(args):
 
             # Model functional
             if args.mtype == 'mlp':
-              model = model_fn(input_shape=(height*width,), num_classes=num_classes)
+              model = model_fn(input_shape=(height*width*channel,), num_classes=num_classes)
             else :
               model = model_fn(input_shape=(height, width, channel), num_classes=num_classes)
 
@@ -149,10 +162,40 @@ def main(args):
             with open("./log/"+args.dataname+"/"+args.expname+'.txt', "w") as f:
               f.write(str(stop_time - start_time)+','+str(nbatch*iteration/(stop_time - start_time)))
 
+def imagenet_custom_loader(datadir, one_hot=True, height=32, width=32, nb_classes=1000):
+    """
+        datadir : Imagenet/imagenet1k--
+                                       |
+                                       | - ILSVRC2010_val_00000001.JPEG, ..., ILSVRC2010_val_00001000.JPEG
+                                       | - imagenet1k-label.txt (not one hot)
+
+        nb_classes : assume 1 - 1000
+    """
+    with tf.device("/CPU:0"):
+      # load JPEG data 
+      filelist = glob.glob(os.path.join(datadir,"ILSVRC2010_val_*.JPEG"))
+      filelist.sort()
+      image_list = []
+      for ifile in filelist:
+        _img = Image.open(ifile)
+        _img = _img.resize((height, width))
+        np_img = np.asarray(_img)
+        image_list.append(np.expand_dims(np_img,axis=0))
+      images = np.concatenate(image_list, axis=0)
+  
+      # convert one hot encoding 
+      targets = np.loadtxt(glob.glob(os.path.join(datadir,"imagenet*-label.txt"))[0])
+      targets = targets.reshape(-1) - 1
+      targets = targets.astype(np.int)
+      one_hot_targets = np.eye(nb_classes)[targets]
+
+      imagenet = ( images.astype(np.float32) , one_hot_targets.astype(np.float32) )
+
+      return imagenet
+
 def input_imgnet_fn(dataset, nbatch=32):
     dataset = dataset.batch(nbatch)
     return dataset
-
 
 def input_fn(images, labels, height=32, width=32, nbatch=32, model_type='mlp',prefetch=1):
     """ 
@@ -166,6 +209,7 @@ def input_fn(images, labels, height=32, width=32, nbatch=32, model_type='mlp',pr
     """
     # reshape other than mlp model
     ndim = len(images.shape)
+    print(images.shape, labels.shape)
     print(ndim, flush=True)
     if ndim <= 3:
       # case MNIST, images = (batch, h x w, c)
@@ -179,7 +223,10 @@ def input_fn(images, labels, height=32, width=32, nbatch=32, model_type='mlp',pr
 
     images = tf.image.resize(images, (height, width))
     if model_type == 'mlp':
-      images = tf.reshape(images, [-1,height*width])
+      if ndim <= 3:
+        images = tf.reshape(images, [-1,height*width])
+      else:
+        images = tf.reshape(images, [-1,height*width*images.shape[3]])
   
     dataset = tf.data.Dataset.from_tensor_slices((images, labels))
     dataset = dataset.batch(nbatch)

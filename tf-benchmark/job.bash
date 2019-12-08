@@ -10,7 +10,8 @@
 job_name='worker'
 task_index=0
 ps_ip_port=("128.135.164.173:22222")
-worker_ip_port=("10.143.3.3:22222" "10.150.49.25:22222")
+worker_ip_port=("10.143.3.3:22222")
+#worker_ip_port=("10.143.3.3:22222" "10.150.49.25:22222")
 network_name="enp4s0" # your network name
 
 ## python path
@@ -19,8 +20,10 @@ network_name="enp4s0" # your network name
 python_path="/home/tkurihana/.conda/envs/tf-gpu/bin/python"
 
 ## Dataset
-dataname='mnist' # or imagenet
-datadir='./MNIST' 
+#dataname='mnist' # or imagenet
+#datadir='./MNIST' 
+dataname='imagenet' # or imagenet
+datadir='./Imagenet/imagenet1k' 
 
 ## Height/Width
 height=32
@@ -30,18 +33,18 @@ width=32
 #width=32
 
 ## Lists
-#models=("mlp" "mobilenet" "resnet")
-models=("mlp")
-batch_sizes=(32)
-#batch_sizes=(32 128 1024)
+models=("mlp" "mobilenet" "resnet")
+#models=("mlp")
+#batch_sizes=(32)
+batch_sizes=(32 128 1024)
 
 ## EXP config list
-delays=(0.1)  #ms
-bandwidths=(1000)  #Mbits
-packets=(0) # percent loss
-#delays=(1 10 100)  #ms
-#bandwidths=(1000 500 100)  #Mbits(FUll ; 1/2 ; 1/10)
-#packets=(0 1 10) # percent loss
+#delays=(0.1)  #ms
+#bandwidths=(1000)  #Mbits
+#packets=(0) # percent loss
+delays=(1 10 100)  #ms
+bandwidths=(1000 500 100)  #Mbits(FUll ; 1/2 ; 1/10)
+packets=(0 1 10) # percent loss
 
 echo 'START PERFORMANCE EXP'
 
