@@ -54,22 +54,25 @@ def main(args):
     #    ],
     #    'ps': ['128.135.164.173:55555'],
     #})
+
+    worker_spec = args.worker_ip_port.split(',') 
+    print(type(worker_spec))
     cluster_spec = tf.train.ClusterSpec({
-        'worker': args.worker_ip_port,
+        'worker': worker_spec,
         'ps': args.ps_ip_port,
     })
 
     # Specify GPU config here otherwise distributed training won't reflect the config
-    config = tf.ConfigProto(
-              gpu_options=tf.GPUOptions(per_process_gpu_memory_fraction = 0.6),
-              allow_soft_placement=True,
-    )
+    #config = tf.ConfigProto(
+    #          gpu_options=tf.GPUOptions(per_process_gpu_memory_fraction = 0.6),
+    #          allow_soft_placement=True,
+    #)
 
     # Add config option specified above. O.w. PS & Worker server may consume all GPU memory
     server = tf.train.Server(cluster_spec,
                              job_name=args.job_name,
-                             task_index=args.task_index,
-                             config=config)
+                             task_index=args.task_index)
+                             #cnfig=config)
 
     if args.job_name == "ps":
         # `server.join()` means it's NEVER killed
@@ -78,7 +81,6 @@ def main(args):
         # Store the variables into `ps`.
         print("\n   Worker Wake up!   \n", flush=True)
         with tf.device(tf.train.replica_device_setter(
-                worker_device="/job:worker/task:%d" % args.task_index,
                 cluster=cluster_spec)):
 
             # get data
@@ -129,7 +131,6 @@ def main(args):
             train_op = optimizer.minimize(loss, global_step=global_step)
 
        
-
             # Initialize the variables, if `is_chief`.
             is_chief = (args.task_index == 0)
 
@@ -267,7 +268,8 @@ if __name__ == '__main__':
     parser.add_argument('--job-name', dest='job_name', type=str,
                         choices=['ps', 'worker'])
     parser.add_argument('--ps-ip-port', dest='ps_ip_port', nargs='+')
-    parser.add_argument('--worker-ip-port', dest='worker_ip_port', nargs='+')
+    #parser.add_argument('--worker-ip-port', dest='worker_ip_port', nargs='+')
+    parser.add_argument('--worker-ip-port', dest='worker_ip_port', type=str)
     parser.add_argument('--task-index', dest='task_index', type=int,
                         default=0)
     parser.add_argument('--mtype', dest='mtype', type=str,
