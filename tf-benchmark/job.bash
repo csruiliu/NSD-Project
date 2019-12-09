@@ -36,17 +36,20 @@ width=224
 ## Lists
 #models=("mlp" "mobilenet" "resnet")
 models=("mlp")
-batch_sizes=(32)
-#batch_sizes=(32 64 128)
+batch_sizes=(32 64 128)
+#batch_sizes=(32)
 
 ## EXP config list
-delays=(0.1)  #ms
-bandwidths=(1000)  #Mbits
-packets=(0) # percent loss
-#delays=(1 10 100)  #ms
+delays=(1 10 100)  #ms
+bandwidths=(1000 750 500)  #Mbits(FUll ; 1/2 ; 1/10)
+packets=(0 1 10) # percent loss
+
+#---- tak debug setting
+#delays=(0.1)  #ms
+#bandwidths=(1000)  #Mbits
+#packets=(0) # percent loss
 #bandwidths=(1000 500 100)  #Mbits(FUll ; 1/2 ; 1/10)
-#bandwidths=(500)  #Mbits(FUll ; 1/2 ; 1/10)
-#packets=(0 1 10) # percent loss
+
 
 echo 'START PERFORMANCE EXP'
 
