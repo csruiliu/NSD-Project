@@ -18,6 +18,7 @@ network_name="enp4s0" # your network name
 # * MUST specify since we run by root
 #python_path="python"
 python_path="/home/tkurihana/.conda/envs/tf-gpu/bin/python"
+pytorch_path="/home/tkurihana/.conda/envs/pytorch/bin/python"
 
 ## Dataset
 #dataname='mnist' # or imagenet
@@ -26,25 +27,26 @@ dataname='imagenet' # or imagenet
 datadir='./Imagenet/imagenet1k' 
 
 ## Height/Width
-height=32
-width=32
+height=224
+width=224
 # Mobilenet will accept 32 or larger Height/Widht
 #height=32
 #width=32
 
 ## Lists
-models=("mlp" "mobilenet" "resnet")
-#models=("mlp")
-#batch_sizes=(32)
-batch_sizes=(32 128 1024)
+#models=("mlp" "mobilenet" "resnet")
+models=("mlp")
+batch_sizes=(32)
+#batch_sizes=(32 64 128)
 
 ## EXP config list
-#delays=(0.1)  #ms
-#bandwidths=(1000)  #Mbits
-#packets=(0) # percent loss
-delays=(1 10 100)  #ms
-bandwidths=(1000 500 100)  #Mbits(FUll ; 1/2 ; 1/10)
-packets=(0 1 10) # percent loss
+delays=(0.1)  #ms
+bandwidths=(1000)  #Mbits
+packets=(0) # percent loss
+#delays=(1 10 100)  #ms
+#bandwidths=(1000 500 100)  #Mbits(FUll ; 1/2 ; 1/10)
+#bandwidths=(500)  #Mbits(FUll ; 1/2 ; 1/10)
+#packets=(0 1 10) # percent loss
 
 echo 'START PERFORMANCE EXP'
 
@@ -73,6 +75,11 @@ if  [ ${job_name} = "worker" ]; then
             cexpname="${model}_${batch_size}-${packet}ps-${bandwidth}mbit-${delay}ms"
 
             echo `sudo tc qdisc change dev ${network_name} root netem delay ${delay} loss ${packet}% rate ${bandwidth}mbit `
+
+
+            echo "CLEAN CUDA CACHE"
+            $pytorch_path  clean.py
+            echo rm -fr __pycache__
 
             $python_path distributed.py \
                   --job-name ${job_name} --task-index ${task_index} --mtype ${model} \
