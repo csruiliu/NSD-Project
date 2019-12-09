@@ -17,7 +17,7 @@ from PIL import Image
 
 # Hyper-parameters
 learning_rate = 0.001
-iteration = 10
+#iteration = 10
 #iteration = 100
 #nbatch = args.batch_size
 
@@ -132,12 +132,14 @@ def main(args):
             is_chief = (args.task_index == 0)
 
             # Terminate hook
+            iteration = len(train_labels) // args.batch_size
             hooks = [tf.train.StopAtStepHook(last_step=iteration),
                      tf.train.CheckpointSaverHook('./example-save',
                                                   save_steps=iteration,
                                                   saver=tf.train.Saver(max_to_keep=1))]
             
             # Training
+            time_sums = 0.000
             with tf.train.MonitoredTrainingSession(
                     is_chief=is_chief,
                     config=config,
@@ -145,17 +147,24 @@ def main(args):
                     hooks=hooks) as sess:
 
                 sess.run(train_iterator.initializer)
-                start_time = time.perf_counter()
                 while not sess.should_stop():
+                    start_time = time.perf_counter()
                     step, _, train_loss = sess.run([get_global_step, train_op, loss])
                     print('In {step} step: loss = {loss}'
                           .format(step=step, loss=train_loss))
-                stop_time = time.perf_counter()
-            stop_time = time.perf_counter()
+                    stop_time = time.perf_counter()
+                    stepwise_time = stop_time - start_time
+                    print("  Step  {} | Stepwise time {} ".format(step, stepwise_time), flush=True)
+                    time_sums += stepwise_time
+            avg_stepwise_time = time_sums/iteration
         
             # logout
-            print('  duration (via time.perf_counter()): %f (%f - %f)' % (stop_time - start_time, stop_time, start_time))
-            print('  Throughput [image/sec] : %f  ' % (nbatch*iteration/(stop_time - start_time) ) )
+            # TODO: Old case
+            #print('  duration (via time.perf_counter()): %f (%f - %f)' % (stop_time - start_time, stop_time, start_time))
+            #print('  Throughput [image/sec] : %f  ' % (nbatch*iteration/(stop_time - start_time) ) )
+            # NEW epoch and stepwise value
+            print('  duration (via time.perf_counter()): %f' % avg_stepwise_time)
+            print('  Throughput [image/sec] : %f  ' % (nbatch*iteration/(time_sums) ) )
             
             # save log
             os.makedirs("./log/"+args.dataname, exist_ok=True)
@@ -171,7 +180,7 @@ def imagenet_custom_loader(datadir, one_hot=True, height=32, width=32, nb_classe
 
         nb_classes : assume 1 - 1000
     """
-    with tf.device("/CPU:0"):
+    with tf.device("/GPU:0"):
       # load JPEG data 
       filelist = glob.glob(os.path.join(datadir,"ILSVRC2010_val_*.JPEG"))
       filelist.sort()
