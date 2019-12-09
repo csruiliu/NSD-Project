@@ -9,22 +9,23 @@
 ## Config
 job_name='worker'
 task_index=0
-ps_ip_port=("128.135.164.173:22222")
-worker_ip_port=("10.143.3.3:22222")
-#worker_ip_port=("10.143.3.3:22222" "10.150.49.25:22222")
-network_name="enp4s0" # your network name
+ps_ip_port=("128.135.24.251:22222")
+#worker_ip_port=("10.143.3.3:22222")
+worker_ip_port=("128.135.24.253:22222" "128.135.24.252:22222" "128.135.24.250:22222" )
+network_name="enp216s0f1" # your network name
 
 ## python path
 # * MUST specify since we run by root
 #python_path="python"
-python_path="/home/tkurihana/.conda/envs/tf-gpu/bin/python"
-pytorch_path="/home/tkurihana/.conda/envs/pytorch/bin/python"
+#python_path="/home/tkurihana/.conda/envs/tf-gpu/bin/python"
+#pytorch_path="/home/tkurihana/.conda/envs/pytorch/bin/python"
 
 ## Dataset
 #dataname='mnist' # or imagenet
 #datadir='./MNIST' 
 dataname='imagenet' # or imagenet
-datadir='./Imagenet/imagenet1k' 
+datadir='/tank/local/ruiliu/dataset/imagenet1k'
+#datadir='./Imagenet/imagenet1k' 
 
 ## Height/Width
 height=224
@@ -41,7 +42,7 @@ batch_sizes=(32 64 128)
 
 ## EXP config list
 delays=(1 10 100)  #ms
-bandwidths=(1000 750 500)  #Mbits(FUll ; 1/2 ; 1/10)
+bandwidths=(1000 500 250)  #Mbits(FUll ; 1/2 ; 1/10)
 packets=(0 1 10) # percent loss
 
 #---- tak debug setting
@@ -55,7 +56,7 @@ echo 'START PERFORMANCE EXP'
 
 if  [ ${job_name} = "ps" ]; then
   echo "PS"
-  $python_path distributed.py \
+  python3 distributed.py \
         --job-name ${job_name} --task-index ${task_index} --mtype "mlp" \
         --ps-ip-port ${ps_ip_port} \
         --worker-ip-port ${worker_ip_port} \
@@ -81,10 +82,10 @@ if  [ ${job_name} = "worker" ]; then
 
 
             echo "CLEAN CUDA CACHE"
-            $pytorch_path  clean.py
-            echo rm -fr __pycache__
+            python3  clean.py
+            echo `rm -fr __pycache__`
 
-            $python_path distributed.py \
+            python3 distributed.py \
                   --job-name ${job_name} --task-index ${task_index} --mtype ${model} \
                   --ps-ip-port ${ps_ip_port} \
                   --worker-ip-port ${worker_ip_port} \
