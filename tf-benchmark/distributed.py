@@ -164,13 +164,13 @@ def main(args):
             #print('  Throughput [image/sec] : %f  ' % (nbatch*iteration/(stop_time - start_time) ) )
             # NEW epoch and stepwise value
             print('  duration (via time.perf_counter()): %f' % avg_stepwise_time)
-            print('  Throughput [image/sec] : %f  ' % (nbatch*iteration/(time_sums) ) )
+            print('  Throughput [image/sec] : %f  ' % (nbatch*iteration/time_sums ) )
             
             # save log
             os.makedirs("./log/"+args.dataname, exist_ok=True)
             with open("./log/"+args.dataname+"/"+args.expname+'.txt', "w") as f:
               #f.write(str(stop_time - start_time)+','+str(nbatch*iteration/(stop_time - start_time)))
-              f.write(str(avg_stepwise_time)+','+str(nbatch*iteration/(time_sums))))
+              f.write(str(avg_stepwise_time)+','+str(nbatch*iteration/time_sums))
 
 def imagenet_custom_loader(datadir, one_hot=True, height=32, width=32, nb_classes=1000):
     """
