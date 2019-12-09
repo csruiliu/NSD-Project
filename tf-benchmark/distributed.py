@@ -2,6 +2,7 @@
 import os
 import glob
 import time
+import tempfile
 import argparse
 import numpy as np
 import tensorflow as tf
@@ -127,27 +128,44 @@ def main(args):
             optimizer = tf.train.AdamOptimizer(learning_rate)
             train_op = optimizer.minimize(loss, global_step=global_step)
 
+       
 
             # Initialize the variables, if `is_chief`.
             is_chief = (args.task_index == 0)
 
             # Terminate hook
             iteration = len(train_labels) // args.batch_size
-            hooks = [tf.train.StopAtStepHook(last_step=iteration),
-                     tf.train.CheckpointSaverHook('./example-save',
-                                                  save_steps=iteration,
-                                                  saver=tf.train.Saver(max_to_keep=1))]
+            #hooks = [tf.train.StopAtStepHook(last_step=iteration),
+            #         tf.train.CheckpointSaverHook('./example-save',
+            #                                      save_steps=iteration,
+            #                                      saver=tf.train.Saver(max_to_keep=1))]
             
             # Training
             time_sums = 0.000
-            with tf.train.MonitoredTrainingSession(
-                    is_chief=is_chief,
-                    config=config,
-                    master=server.target,
-                    hooks=hooks) as sess:
+            #with tf.train.MonitoredTrainingSession(
+            #        is_chief=is_chief,
+            #        config=config,
+            #        master=server.target,
+            #        hooks=hooks) as sess:
 
-                sess.run(train_iterator.initializer)
-                while not sess.should_stop():
+            init_op = tf.global_variables_initializer()
+            #train_dir = tempfile.mkdtemp()
+            sv = tf.train.Supervisor(is_chief=is_chief,
+                                     init_op=init_op,
+                                     recovery_wait_secs=1,
+                                     global_step=global_step)
+
+            if is_chief:
+              print('Initailizing session, worker:',args.task_index)
+            else:
+              print('Waiting for session to be initaialized, worker:',args.task_index)
+            print('Session initialization complete, worker:',args.task_index)
+
+            sess = sv.prepare_or_wait_for_session(server.target)
+
+            sess.run(train_iterator.initializer)
+                #while not sess.should_stop():
+            while True:
                     start_time = time.perf_counter()
                     step, _, train_loss = sess.run([get_global_step, train_op, loss])
                     print('In {step} step: loss = {loss}'
@@ -156,6 +174,8 @@ def main(args):
                     stepwise_time = stop_time - start_time
                     print("  Step  {} | Stepwise time {} ".format(step, stepwise_time), flush=True)
                     time_sums += stepwise_time
+                    if step >= iteration:
+                      break
             avg_stepwise_time = time_sums/iteration
         
             # logout
