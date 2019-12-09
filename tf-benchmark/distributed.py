@@ -113,8 +113,9 @@ def main(args):
             imgs, labels = train_iterator.get_next()
 
             # global step config
-            global_step = tf.train.create_global_step()
-            get_global_step = tf.train.get_global_step()
+            global_step = tf.Variable(0, name='global_step', trainable=False)
+            
+            
 
             # Model functional
             if args.mtype == 'mlp':
@@ -135,7 +136,8 @@ def main(args):
             is_chief = (args.task_index == 0)
 
             # Terminate hook
-            iteration = len(train_labels) // args.batch_size
+            #iteration = len(train_labels) // args.batch_size
+            iteration = 5
             #hooks = [tf.train.StopAtStepHook(last_step=iteration),
             #         tf.train.CheckpointSaverHook('./example-save',
             #                                      save_steps=iteration,
@@ -166,17 +168,18 @@ def main(args):
 
             sess.run(train_iterator.initializer)
                 #while not sess.should_stop():
-            while True:
+            for i in range(iteration):
+            #while True:
                     start_time = time.perf_counter()
-                    step, _, train_loss = sess.run([get_global_step, train_op, loss])
-                    print('In {step} step: loss = {loss}'
-                          .format(step=step, loss=train_loss))
+                    _, step  = sess.run([train_op, global_step])
+                    #print('In {step} step: loss = {loss}'
+                    #      .format(step=step, loss=train_loss))
                     stop_time = time.perf_counter()
                     stepwise_time = stop_time - start_time
                     print("  Step  {} | Stepwise time {} ".format(step, stepwise_time), flush=True)
                     time_sums += stepwise_time
-                    if step >= iteration:
-                      break
+                    #if step >= iteration:
+                    #  break
             avg_stepwise_time = time_sums/iteration
         
             # logout
