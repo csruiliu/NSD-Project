@@ -95,7 +95,7 @@ def main(unused_argv):
             batch_end = (i+1) * batchSize
             batch_list = image_list[batch_offset:batch_end] 
 
-            X_mini_batch_feed = load_image_dir(X_train_path, batch_list, imgHeight, imgWidth)
+            X_mini_batch_feed = load_image_dir(image_dir, batch_list, imgHeight, imgWidth)
             Y_mini_batch_feed = Y_train[batch_offset:batch_end,:]
             #batch_xs, batch_ys = mnist.train.next_batch(FLAGS.batch_size)
             train_feed = {features: X_mini_batch_feed, labels: Y_mini_batch_feed}
