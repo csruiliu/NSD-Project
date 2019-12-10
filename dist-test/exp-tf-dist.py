@@ -125,7 +125,7 @@ def main(unused_argv):
         #val_feed = {x: mnist.validation.images, y_: mnist.validation.labels}
         #val_xent = sess.run(cross_entropy, feed_dict=val_feed)
         #print('After {} training step(s), validation cross entropy = {}'.format(FLAGS.train_steps, val_xent))
-        sess.close()
+        #sess.close()
 
 if __name__ == '__main__':
     tf.app.run()
