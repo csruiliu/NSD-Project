@@ -90,8 +90,8 @@ def main(unused_argv):
         local_step = 0
         for i in range(FLAGS.train_steps):
         #while True: 
-            batch_offset = i * batch_size
-            batch_end = (i+1) * batch_size
+            batch_offset = i * batchSize
+            batch_end = (i+1) * batchSize
             batch_list = image_list[batch_offset:batch_end] 
 
             X_mini_batch_feed = load_image_dir(X_train_path, batch_list, imgHeight, imgWidth)
