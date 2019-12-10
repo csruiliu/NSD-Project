@@ -88,6 +88,7 @@ def main(unused_argv):
         print('Traing begins @', time_begin)
 
         local_step = 0
+        image_list = sorted(os.listdir(image_dir))
         for i in range(FLAGS.train_steps):
         #while True: 
             batch_offset = i * batchSize
