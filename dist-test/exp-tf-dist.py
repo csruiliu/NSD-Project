@@ -107,7 +107,8 @@ def main(unused_argv):
             step_time_end = timer()
             
             step_dur = step_time_end - step_time_start
-            step_time_total += step_dur
+            if i != 0:
+                step_time_total += step_dur
             local_step += 1
 
             #now = time.time()
