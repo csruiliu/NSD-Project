@@ -2,6 +2,7 @@
 import math
 import tempfile
 import time
+from timeit import default_timer as timer
 import tensorflow as tf
 import os
 from tensorflow.examples.tutorials.mnist import input_data
@@ -88,6 +89,7 @@ def main(unused_argv):
         print('Traing begins @', time_begin)
 
         local_step = 0
+        step_time_total = 0
         image_list = sorted(os.listdir(image_dir))
         for i in range(FLAGS.train_steps):
         #while True: 
@@ -99,20 +101,26 @@ def main(unused_argv):
             Y_mini_batch_feed = Y_data[batch_offset:batch_end,:]
             #batch_xs, batch_ys = mnist.train.next_batch(FLAGS.batch_size)
             train_feed = {features: X_mini_batch_feed, labels: Y_mini_batch_feed}
-
+            
+            step_time_start = timer()
             sess.run([trainOps, global_step], feed_dict=train_feed)
+            step_time_end = timer()
+            
+            step_dur = step_time_end - step_time_start
+            step_time_total += step_dur
             local_step += 1
 
-            now = time.time()
-            print('{}: Worker {}: traing step {})'.format(now, FLAGS.task_index, i))
+            #now = time.time()
+            print('Worker {} | traing step {} | step time {} )'.format(FLAGS.task_index, i, step_dur))
 
             #if step >= FLAGS.train_steps:
             #    break
-
-        time_end = time.time()
-        print('Training ends:',time_end)
-        train_time = time_end - time_begin
-        print('Training elapsed time:',train_time)
+        avg_step_time = step_dur/FLAGS.train_steps 
+        print('average step time:',avg_step_time)
+        #time_end = time.time()
+        #print('Training ends:',time_end)
+        #train_time = time_end - time_begin
+        #print('Training elapsed time:',train_time)
 
         #val_feed = {x: mnist.validation.images, y_: mnist.validation.labels}
         #val_xent = sess.run(cross_entropy, feed_dict=val_feed)
