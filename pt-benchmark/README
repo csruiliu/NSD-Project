@@ -4,5 +4,5 @@
 --epochs: number of total epochs to run (2 by default)
 
 For instance, 2 nodes with 2 GPUs each, we need 4 terminals (one on each node). 
-On node 0:    python ./mobilenet.py -n 2 -g 2 -nr 0
-On node 1:    python ./mobilenet.py -n 2 -g 2 -nr 1
+On node 0:    python ./mobilenet.py -n 2 -g 2 -nr 0 -expname=mlp -batch_size=3 -datadir=./data
+On node 1:    python ./mobilenet.py -n 2 -g 2 -nr 1 -expname=mlp -batch_size=3 -datadir=./data
