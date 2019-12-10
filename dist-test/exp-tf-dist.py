@@ -7,6 +7,7 @@ import tensorflow as tf
 import os
 from tensorflow.examples.tutorials.mnist import input_data
 from perceptron import perceptron
+from resnet import resnet
 from img_utils import *
 
 flags = tf.app.flags
@@ -69,7 +70,8 @@ def main(unused_argv):
         features = tf.placeholder(tf.float32, [None, imgWidth, imgHeight, numChannels])
         labels = tf.placeholder(tf.int64, [None, numClasses])
 
-        modelEntity = perceptron('mlp', 1, imgHeight, imgWidth, batchSize, numClasses, opt='Adam')
+        #modelEntity = perceptron('mlp', 1, imgHeight, imgWidth, batchSize, numClasses, opt='Adam')
+        modelEntity = resnet('resnet', 1, imgHeight, imgWidth, batchSize, numClasses, opt='Adam')
         modelLogit = modelEntity.build(features)
         trainOps = modelEntity.train(modelLogit, labels)
         
