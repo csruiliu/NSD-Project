@@ -12,7 +12,7 @@ from img_utils import *
 flags = tf.app.flags
 
 flags.DEFINE_integer('hidden_units', 100, 'Number of units in the hidden layer of the NN')
-flags.DEFINE_integer('train_steps', 10, 'Number of training steps to perform')
+flags.DEFINE_integer('train_steps', 5, 'Number of training steps to perform')
 flags.DEFINE_integer('batch_size', 100, 'Training batch size ')
 flags.DEFINE_float('learning_rate', 0.01, 'Learning rate')
 
@@ -111,11 +111,11 @@ def main(unused_argv):
             local_step += 1
 
             #now = time.time()
-            print('Worker {} | traing step {} | step time {} )'.format(FLAGS.task_index, i, step_dur))
+            print('Worker {} | traing step {} | step time {}'.format(FLAGS.task_index, i, step_dur))
 
             #if step >= FLAGS.train_steps:
             #    break
-        avg_step_time = step_dur/FLAGS.train_steps 
+        avg_step_time = step_time_total/FLAGS.train_steps 
         print('average step time:',avg_step_time)
         #time_end = time.time()
         #print('Training ends:',time_end)
